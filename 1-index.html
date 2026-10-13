@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny Fighter Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0e1a;--panel:#151a2e;--panel2:#1d2440;--ink:#eef1ff;--dim:#9aa3c7;--acc:#ffd23f;--acc2:#5be7ff;--good:#5dff8f;--bad:#ff5d6c;}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#1b2140 0%,var(--bg) 60%);color:var(--ink);font-family:Inter,system-ui,sans-serif;min-height:100vh}
+.pixel{font-family:'Press Start 2P',monospace;letter-spacing:.5px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h1.pixel{font-size:18px;margin:0;color:var(--acc);text-shadow:0 3px 0 #7a5b00}
+.tag{color:var(--dim);font-size:13px;margin-top:6px}
+.btn{cursor:pointer;border:0;border-radius:12px;padding:12px 18px;font-weight:800;font-size:15px;background:var(--acc);color:#1a1500;box-shadow:0 4px 0 #a98500;transition:transform .05s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #a98500}
+.btn.ghost{background:var(--panel2);color:var(--ink);box-shadow:0 4px 0 #0c0f1f}
+.btn.acc2{background:var(--acc2);box-shadow:0 4px 0 #1899b0;color:#00161b}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.pill{background:var(--panel2);border:1px solid #2b3358;border-radius:999px;padding:8px 14px;font-size:13px;color:var(--dim)}
+.pill b{color:var(--good)}
+.hidden{display:none!important}
+.panel{background:var(--panel);border:1px solid #262e52;border-radius:18px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.center{text-align:center}
+.arena{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch;margin:18px 0}
+.fighter{background:var(--panel2);border:1px solid #2b3358;border-radius:16px;padding:14px;text-align:center;position:relative;overflow:hidden}
+.fighter img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:#0c0f1f;image-rendering:pixelated}
+.fighter .name{font-weight:800;margin:10px 0 2px;font-size:16px}
+.fighter .epithet{color:var(--acc2);font-size:12px;margin-bottom:8px;min-height:14px}
+.fighter .ability{font-size:12px;color:var(--dim);margin-top:6px}
+.vs{align-self:center;font-family:'Press Start 2P';color:var(--bad);font-size:20px;text-shadow:0 3px 0 #5b0d14}
+.hpbar{height:14px;background:#0c0f1f;border-radius:999px;border:1px solid #2b3358;margin-top:10px;overflow:hidden}
+.hpbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--good),#b6ff5d);width:100%;transition:width .5s}
+.hpbar.foe>i{background:linear-gradient(90deg,var(--bad),#ff9a5d)}
+.hptext{font-size:11px;color:var(--dim);margin-top:4px}
+.log{background:#0c0f1f;border:1px solid #262e52;border-radius:14px;padding:16px;height:230px;overflow-y:auto;font-size:14.5px;line-height:1.55}
+.log p{margin:0 0 10px}
+.log .sys{color:var(--dim);font-style:italic}
+.log .hit b{color:var(--acc)}
+.log .dmg{color:var(--bad);font-weight:700}
+.log .win{color:var(--good);font-weight:800}
+.log .lose{color:var(--bad);font-weight:800}
+input[type=text]{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #2b3358;background:#0c0f1f;color:var(--ink);font-size:15px}
+.row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.row .btn{flex:1;min-width:140px}
+.ladder{display:flex;gap:6px;justify-content:center;margin:6px 0 0;flex-wrap:wrap}
+.ladder span{width:12px;height:12px;border-radius:3px;background:#2b3358}
+.ladder span.on{background:var(--acc)}
+.hint{color:var(--dim);font-size:13px;margin-top:10px}
+.sr{position:absolute;left:-9999px}
+.badge{display:inline-block;margin-top:8px;opacity:.85}
+footer{margin-top:26px;text-align:center;color:var(--dim);font-size:12px}
+.spinner{display:inline-block;width:16px;height:16px;border:3px solid #2b3358;border-top-color:var(--acc);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.shake{animation:sh .3s}@keyframes sh{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 class="pixel">TINY FIGHTER ARENA</h1>
+      <div class="tag">Describe a fighter in one line. The AI builds it and commentates the battle. Powered by <b>Pollinations</b>.</div>
+    </div>
+    <div id="walletArea"></div>
+  </header>
+
+  <!-- CONNECT -->
+  <section id="connectScreen" class="panel center">
+    <div class="pixel" style="font-size:15px;margin-bottom:12px">ENTER THE ARENA</div>
+    <p style="color:var(--dim);max-width:520px;margin:0 auto 18px">
+      Every fighter, portrait and line of commentary is generated live by AI. Connect your
+      <b>Pollinations</b> account and the AI runs on <b>your own Pollen</b> (Bring Your Own Pollen) —
+      you stay in control of your balance and can revoke access any time.
+    </p>
+    <button class="btn" id="connectBtn">⚡ Connect Pollen to Play</button>
+    <div class="hint">One click. Free to look — a fight only spends a little of your Pollen on the AI text.</div>
+    <div style="margin-top:18px"><img id="teaserImg" alt="A tiny fighter" style="width:180px;border-radius:12px;image-rendering:pixelated"></div>
+  </section>
+
+  <!-- CREATE -->
+  <section id="createScreen" class="panel hidden">
+    <div class="pixel" style="font-size:13px;margin-bottom:14px;color:var(--acc2)">FORGE YOUR FIGHTER</div>
+    <input type="text" id="descInput" maxlength="140" placeholder="e.g. a caffeinated squirrel knight with a rubber sword">
+    <div class="row">
+      <button class="btn acc2" id="forgeBtn">🔨 Forge Fighter</button>
+    </div>
+    <div class="hint">Tip: specific, clever descriptions make stronger fighters. The AI rewards imagination.</div>
+    <div id="forgeStatus" class="hint"></div>
+  </section>
+
+  <!-- BATTLE -->
+  <section id="battleScreen" class="hidden">
+    <div class="center" style="margin-bottom:4px">
+      <span class="pill">Ladder level <b id="levelText">1</b></span>
+      <div class="ladder" id="ladderPips"></div>
+    </div>
+    <div class="arena">
+      <div class="fighter" id="cardA">
+        <img id="imgA" alt="Your fighter">
+        <div class="name" id="nameA">…</div>
+        <div class="epithet" id="epiA"></div>
+        <div class="hpbar"><i id="hpA"></i></div>
+        <div class="hptext" id="hpTextA"></div>
+        <div class="ability" id="abA"></div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="fighter" id="cardB">
+        <img id="imgB" alt="Challenger">
+        <div class="name" id="nameB">…</div>
+        <div class="epithet" id="epiB"></div>
+        <div class="hpbar foe"><i id="hpB"></i></div>
+        <div class="hptext" id="hpTextB"></div>
+        <div class="ability" id="abB"></div>
+      </div>
+    </div>
+    <div class="log" id="log"></div>
+    <div class="row center" style="justify-content:center">
+      <button class="btn" id="fightBtn">⚔️ Fight!</button>
+      <button class="btn ghost hidden" id="nextBtn">Next Challenger →</button>
+      <button class="btn ghost hidden" id="shareBtn">🔗 Share Fight</button>
+      <button class="btn ghost hidden" id="newBtn">New Fighter</button>
+    </div>
+    <div class="hint center" id="spendText"></div>
+  </section>
+
+  <footer>
+    Built with the Pollinations API · BYOP so your key never leaves your browser.
+    <a href="https://pollinations.ai/?ref=badge" target="_blank" rel="noopener"><img src="https://raw.githubusercontent.com/pollinations/pollinations/main/packages/ui/src/brand/badge-made-with.svg" alt="Made with pollinations.ai" style="height:22px;vertical-align:middle"></a>
+  </footer>
+</div>
+
+<script>
+"use strict";
+const CLIENT_ID="pk_jZMCpmzqL4twnFSG";
+const TEXT_URL="https://gen.pollinations.ai/v1/chat/completions";
+const TEXT_MODEL="openai/gpt-5.4-nano";
+const imgUrl=(p,seed=1,w=640,h=640)=>`https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=${w}&height=${h}&seed=${seed}&nologo=true&model=flux&safe=true`;
+const $=id=>document.getElementById(id);
+const S={key:null,fighter:null,foe:null,level:1,log:[],busy:false,spent:0,turns:0};
+let spendTokens=0;
+
+/* ---------- BYOP ---------- */
+function redirectUri(){return location.origin+location.pathname;}
+function connect(){
+  const state=Math.random().toString(36).slice(2);
+  sessionStorage.setItem('tfa_state',state);
+  const p=new URLSearchParams({redirect_uri:redirectUri(),client_id:CLIENT_ID,scope:'usage',models:'text,image',state});
+  location.href='https://enter.pollinations.ai/authorize?'+p;
+}
+function readKeyFromHash(){
+  if(!location.hash)return;
+  const q=new URLSearchParams(location.hash.slice(1));
+  const k=q.get('api_key'),st=q.get('state');
+  if(k){
+    if(st&&sessionStorage.getItem('tfa_state')&&st!==sessionStorage.getItem('tfa_state')){console.warn('state mismatch');}
+    sessionStorage.setItem('tfa_key',k);
+    history.replaceState(null,'',location.pathname);
+  }
+}
+function currentKey(){return S.key||sessionStorage.getItem('tfa_key');}
+
+/* ---------- text gen ---------- */
+async function chat(messages,json=true){
+  const key=currentKey(); if(!key) throw new Error('no-key');
+  const body={model:TEXT_MODEL,messages,temperature:0.9};
+  if(json)body.response_format={type:'json_object'};
+  const r=await fetch(TEXT_URL,{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok){const t=await r.text();throw new Error('api '+r.status+': '+t.slice(0,200));}
+  const d=await r.json();
+  if(d.usage){spendTokens+=(d.usage.total_tokens||0);updateSpend();}
+  return d.choices?.[0]?.message?.content||'';
+}
+function parseJson(t){
+  try{return JSON.parse(t);}catch(e){}
+  const m=t.match(/\{[\s\S]*\}/); if(m){try{return JSON.parse(m[0]);}catch(e){}}
+  return null;
+}
+async function chatJson(messages,retries=2){
+  for(let i=0;i<=retries;i++){
+    const t=await chat(messages,true);
+    const j=parseJson(t); if(j)return j;
+  }
+  throw new Error('bad-json');
+}
+function updateSpend(){
+  // gpt-5.4-nano ~0.15/M in, ~0.94/M out; rough blended 0.5/M
+  const est=(spendTokens/1e6*0.5).toFixed(4);
+  $('spendText').textContent='AI text this session: '+spendTokens+' tokens (~'+est+' Pollen)';
+}
+
+/* ---------- fighter gen ---------- */
+const FIGHTER_SYS=`You design funny battle fighters for a tiny arena game. Given a one-line description, invent a coherent, humorous fighter. Respond with ONLY a JSON object:
+{"name":string,"epithet":string,"look":string,"hp":number,"ability":string,"quirk":string,"style":string}
+- look: a vivid visual description for an image generator (pixel-art fighter portrait, full body, plain dark background).
+- hp: integer 60-100, higher for tougher-sounding fighters.
+- ability: a short signature move name + 1-line effect.
+- quirk: one funny trait. style: one line fighting style.
+Reward clever, specific descriptions with more personality.`;
+async function forge(desc){
+  const j=await chatJson([{role:'system',content:FIGHTER_SYS},{role:'user',content:'One-line description: "'+desc+'"'}]);
+  j.hp=Math.max(40,Math.min(120,parseInt(j.hp)||70));
+  return j;
+}
+const CHAL_SYS=`You design funny enemy fighters for a tiny arena ladder. Given a ladder level, invent a coherent humorous challenger scaled to that level (level 1 = joke opponent, higher = scarier). Respond with ONLY a JSON object:
+{"name":string,"epithet":string,"look":string,"hp":number,"ability":string,"quirk":string,"style":string}
+- look: vivid visual description for a pixel-art fighter portrait, full body, plain dark background.
+- hp: integer 55 + level*6 up to 120. ability: short signature move + 1-line effect. quirk: funny trait. style: one line.`;
+async function genChallenger(level){
+  const j=await chatJson([{role:'system',content:CHAL_SYS},{role:'user',content:'Ladder level '+level+'. Invent the challenger.'}]);
+  j.hp=Math.max(40,Math.min(120,parseInt(j.hp)||(55+level*6)));
+  return j;
+}
+
+/* ---------- battle ---------- */
+const BATTLE_SYS=`You are the hilarious commentator and referee of a tiny fighter arena. Two fighters battle turn by turn. Based on their abilities, styles and quirks, narrate ONE exchange in 1-3 short, funny sentences, then decide damage. Reward clever, coherent fighter concepts and good matchups; a vague or lazy fighter should underperform. Respond with ONLY a JSON object:
+{"narration":string,"dmgToA":number,"dmgToB":number}
+- narration: vivid, funny, present tense, references their actual moves/quirks. No damage numbers in the text.
+- dmgToA / dmgToB: integers 0-22. Most turns both take some; a strong moment can be one-sided. Keep a fight roughly 5-9 exchanges.`;
+async function battleTurn(){
+  const a=S.fighter,b=S.foe;
+  const recent=S.log.slice(-4).map(l=>l.text).join(' ');
+  const hp=`HP ${a.name}:${a.hp} ${b.name}:${b.hp}.`;
+  const msg='Fighter A: '+JSON.stringify(a)+'\nFighter B: '+JSON.stringify(b)+'\n'+hp+'\nRecent action: '+(recent||'the fight just started')+'\nNarrate the next exchange and give damage.';
+  return chatJson([{role:'system',content:BATTLE_SYS},{role:'user',content:msg}]);
+}
+
+/* ---------- render ---------- */
+function renderWallet(){
+  const k=currentKey();
+  $('walletArea').innerHTML = k
+    ? '<span class="pill">🟢 Pollen connected</span> <button class="btn ghost" style="padding:8px 12px;font-size:12px" onclick="disconnect()">Disconnect</button>'
+    : '<span class="pill">⚪ Not connected</span>';
+}
+function log(html,cls){const p=document.createElement('p');if(cls)p.className=cls;p.innerHTML=html;$('log').appendChild(p);$('log').scrollTop=$('log').scrollHeight;}
+function setBar(el,hp,max){el.style.width=Math.max(0,Math.round(hp/max*100))+'%';}
+function renderFighter(card,f){
+  $(card==='A'?'nameA':'nameB').textContent=f.name;
+  $(card==='A'?'epiA':'epiB').textContent=f.epithet||'';
+  $(card==='A'?'abA':'abB').textContent='★ '+(f.ability||'');
+  $(card==='A'?'hpTextA':'hpTextB').textContent=f.hp+' / '+f.maxhp+' HP';
+  setBar($(card==='A'?'hpA':'hpB'),f.hp,f.maxhp);
+}
+function renderLadder(){const p=$('ladderPips');p.innerHTML='';for(let i=1;i<=Math.max(5,S.level);i++){const s=document.createElement('span');if(i<=S.level)s.className='on';p.appendChild(s);}}
+
+/* ---------- flow ---------- */
+function show(id){['connectScreen','createScreen','battleScreen'].forEach(s=>$(s).classList.toggle('hidden',s!==id));}
+function disconnect(){sessionStorage.removeItem('tfa_key');S.key=null;renderWallet();show('connectScreen');}
+async function onForge(){
+  const desc=$('descInput').value.trim(); if(!desc){$('forgeStatus').textContent='Describe your fighter first.';return;}
+  S.busy=true;$('forgeBtn').disabled=true;$('forgeStatus').innerHTML='<span class="spinner"></span> The AI is forging your fighter…';
+  try{
+    const f=await forge(desc);
+    f.desc=desc;f.maxhp=f.hp;
+    f.img=imgUrl((f.look||desc)+', pixel art game character portrait',Math.floor(Math.random()*1e6));
+    S.fighter=f;S.level=1;
+    await startLadder();
+  }catch(e){$('forgeStatus').textContent='Error: '+e.message+(e.message==='no-key'?' — connect Pollen first.':'');}
+  S.busy=false;$('forgeBtn').disabled=false;
+}
+async function startLadder(){
+  show('battleScreen');$('log').innerHTML='';S.log=[];
+  renderLadder();$('levelText').textContent=S.level;
+  log('Forged <b>'+esc(S.fighter.name)+'</b> — <i>'+esc(S.fighter.epithet||'')+'</i>.','sys');
+  $('imgA').src=S.fighter.img;renderFighter('A',S.fighter);
+  await loadChallenger();
+}
+async function loadChallenger(){
+  $('fightBtn').classList.add('hidden');$('nextBtn').classList.add('hidden');$('newBtn').classList.add('hidden');
+  log('Scouting the level '+S.level+' challenger…','sys');
+  const f=await genChallenger(S.level);
+  f.maxhp=f.hp;
+  f.img=imgUrl((f.look||f.name)+', pixel art game character portrait',Math.floor(Math.random()*1e6));
+  S.foe=f;$('imgB').src=f.img;renderFighter('B',f);
+  log('Challenger approaches: <b>'+esc(f.name)+'</b> — <i>'+esc(f.epithet||'')+'</i>. '+esc(f.quirk||''),'sys');
+  $('fightBtn').classList.remove('hidden');$('fightBtn').disabled=false;
+}
+async function runBattle(){
+  if(S.busy)return;S.busy=true;$('fightBtn').disabled=true;
+  log('The bell rings. <b>'+esc(S.fighter.name)+'</b> vs <b>'+esc(S.foe.name)+'</b>!','sys');
+  try{
+    while(S.fighter.hp>0&&S.foe.hp>0){
+      const t=await battleTurn();
+      S.fighter.hp=Math.max(0,S.fighter.hp-(parseInt(t.dmgToA)||0));
+      S.foe.hp=Math.max(0,S.foe.hp-(parseInt(t.dmgToB)||0));
+      S.log.push({text:t.narration});
+      let line=esc(t.narration);
+      const dA=parseInt(t.dmgToA)||0,dB=parseInt(t.dmgToB)||0;
+      let tail=[];if(dB>0)tail.push(esc(S.foe.name)+' takes <span class="dmg">'+dB+'</span>');if(dA>0)tail.push(esc(S.fighter.name)+' takes <span class="dmg">'+dA+'</span>');
+      log(line+(tail.length?' <span class="sys">('+tail.join(' · ')+')</span>':''),'hit');
+      if(t.dmgToB>0){$('cardB').classList.remove('shake');void $('cardB').offsetWidth;$('cardB').classList.add('shake');}
+      if(t.dmgToA>0){$('cardA').classList.remove('shake');void $('cardA').offsetWidth;$('cardA').classList.add('shake');}
+      renderFighter('A',S.fighter);renderFighter('B',S.foe);
+      await new Promise(r=>setTimeout(r,1400));
+      if(S.turns++>14)break;
+    }
+  }catch(e){log('Error: '+esc(e.message),'lose');S.busy=false;return;}
+  if(S.foe.hp<=0&&S.fighter.hp>0){
+    log('🏆 <b>'+esc(S.foe.name)+'</b> is down! <b>'+esc(S.fighter.name)+'</b> wins the bout!','win');
+    S.level++;renderLadder();$('levelText').textContent=S.level;
+    $('nextBtn').classList.remove('hidden');$('shareBtn').classList.remove('hidden');
+  }else{
+    log('💀 <b>'+esc(S.fighter.name)+'</b> is knocked out at ladder level '+S.level+'. The arena remembers.','lose');
+    $('newBtn').classList.remove('hidden');$('shareBtn').classList.remove('hidden');
+  }
+  S.busy=false;
+}
+function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function share(){
+  const data={d:S.fighter.desc,l:S.fighter.hp<=0?S.level:S.level-1||1,n:S.fighter.name};
+  const link=location.origin+location.pathname+'#fight='+btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  navigator.clipboard?.writeText(link);
+  $('shareBtn').textContent='✓ Link copied';setTimeout(()=>$('shareBtn').textContent='🔗 Share Fight',1500);
+}
+
+/* ---------- init ---------- */
+function init(){
+  readKeyFromHash();
+  renderWallet();
+  $('teaserImg').src=imgUrl('tiny pixel art boxing arena with two cute fighters facing off, dark stadium, dramatic lights',7,512,320);
+  if(currentKey()){show('createScreen');}else{show('connectScreen');}
+  // shared fight link
+  const m=location.hash.match(/fight=([A-Za-z0-9+/=]+)/);
+  if(m){try{const d=JSON.parse(decodeURIComponent(escape(atob(m[1]))));if(d.d)$('descInput').value=d.d;}catch(e){}}
+  $('connectBtn').onclick=connect;
+  $('forgeBtn').onclick=onForge;
+  $('fightBtn').onclick=runBattle;
+  $('nextBtn').onclick=loadChallenger;
+  $('newBtn').onclick=()=>{show('createScreen');};
+  $('shareBtn').onclick=share;
+  $('descInput').addEventListener('keydown',e=>{if(e.key==='Enter')onForge();});
+}
+init();
+</script>
+</body>
+</html>
